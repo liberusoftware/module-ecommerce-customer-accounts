@@ -1,0 +1,27 @@
+{
+    "name": "ecommerce-customer-accounts",
+    "version": "0.1.0",
+    "description": "The person's standing to act: claims, saved lists, and the privacy request as a case with participants.",
+    "category": "capability",
+    "provider": "Liberu\\Ecommerce\\CustomerAccounts\\CustomerAccountsServiceProvider",
+    "requires": {
+        "packages": {}
+    },
+    "features": [
+        "A privacy request is a case with a lawful basis, a deadline in a named timezone and one row per participant",
+        "The participant registry is explicit configuration; an unregistered module is invisible and that is a defect, not a default",
+        "A request whose participants did not all answer is concluded as partial, naming who did not answer, never as done",
+        "Request scope is a first-class field because the fleet disagrees: one merchant or the person everywhere",
+        "A participant that answered at a different scope than the request asked for is recorded as a mismatch",
+        "One consumed contract for every participating module; no sibling module is depended on or called directly",
+        "Nothing is erased inside an HTTP request: participants are commissioned as separate retryable steps",
+        "An export is assembled from recorded contributions and is delivered as partial when one is missing",
+        "A guest order claim is proof-of-possession: reference plus email, completed by a token, never a lookup",
+        "A wrong order reference and a wrong email are indistinguishable, so the claim path is not an order oracle",
+        "Failed claim attempts are recorded and rate-limited, because the failures are the security signal",
+        "Saved lists hold product references and quantities, never a price, and never a priced cart line",
+        "A share is its own revocable aggregate belonging to the list, not a single token on the person",
+        "Concluding an erasure revokes every share the subject holds and clears this module's own rows",
+        "No password, no token and no second factor is read or written; re-authentication is recorded, never held"
+    ]
+}
