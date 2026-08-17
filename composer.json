@@ -3,7 +3,7 @@
     "description": "The person's standing to act: the claim that a past transaction was theirs, the saved lists they keep, and the privacy request other modules execute against their own rows.",
     "type": "liberu-module",
     "license": "MIT",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "keywords": ["laravel", "ecommerce", "privacy", "gdpr", "accounts", "liberu"],
     "require": {
         "php": "^8.5",

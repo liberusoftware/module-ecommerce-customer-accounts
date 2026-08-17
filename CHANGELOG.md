@@ -5,6 +5,32 @@ All notable changes to `liberusoftware/ecommerce-customer-accounts` are document
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-17
+
+### Fixed
+
+- **Every relation that restates its parent's tenant is now guarded** — `Models\RestatesTenant`,
+  adopted from `ecommerce-loyalty` `0.1.0` where the remedy was proven. `SavedList::items()`,
+  `SavedList::shares()`, `OrderClaim::attempts()` and `PrivacyRequest::participants()` restated it
+  as `where('tenant_id', (string) $this->tenant_id)`, which is correct through a loaded parent and
+  wrong from a fresh one: `withCount()` and `whereHas()` build the relation from an instance whose
+  `tenant_id` is `null`, so the predicate became `where('tenant_id', '')` and **every count would
+  have silently returned zero**. Not previously reachable — nothing in `src/` counted — and a trap
+  armed for the first surface that did. A merchant reading `0 saved items` acts on it exactly as
+  confidently as on a wrong number.
+- **`OrderClaim::attempts()` is restated as a column comparison when there is no loaded tenant**,
+  because it is the one relation the guard's fallback does not cover: it joins on `order_reference`
+  with no foreign key, so falling back to the join alone would have counted two merchants' attempts
+  against order number 1001 as one merchant's. The tenant predicate is the only thing between them.
+
+### Notes
+
+- `CustodyTest` now asserts **both** halves for all four relations: the cross-merchant row is absent
+  through a loaded parent, *and* `withCount()`/`whereHas()` return a **non-zero** count for the
+  merchant that owns the rows. An assertion of zero is indistinguishable from the defect.
+- `ModuleBoundaryRulesTest` fails if any model states `where('tenant_id', ...)` directly, so the
+  next relation cannot be written the obvious way.
+
 ## [0.1.0] - 2026-08-14
 
 ### Added
@@ -41,4 +67,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The provider binds nothing. All three seams are optional by design, and a default implementation
   of the participant seam would turn "we could not reach it" into "done".
 
+[0.2.0]: https://github.com/liberusoftware/module-ecommerce-customer-accounts/releases/tag/0.2.0
 [0.1.0]: https://github.com/liberusoftware/module-ecommerce-customer-accounts/releases/tag/0.1.0

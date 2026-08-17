@@ -34,6 +34,8 @@ use Liberu\Ecommerce\CustomerAccounts\Enums\ClaimState;
  */
 class OrderClaim extends Model
 {
+    use RestatesTenant;
+
     protected $table = 'customer_accounts_order_claims';
 
     protected $guarded = [];
@@ -74,11 +76,18 @@ class OrderClaim extends Model
      * tenant restatement this relation shows merchant A the attempts somebody
      * made against merchant B's order of the same number — a foreign-key-free
      * join is exactly where a tenant leak hides.
+     *
+     * The restatement is guarded — see {@see RestatesTenant} — and `correlate`
+     * is what makes the guard safe *here*: with no foreign key, a fresh instance
+     * falling back to the join alone would count both merchants' attempts, so it
+     * compares the child's tenant to the parent row's column instead.
      */
     public function attempts(): HasMany
     {
-        return $this->hasMany(ClaimAttempt::class, 'order_reference', 'order_reference')
-            ->where('tenant_id', (string) $this->tenant_id);
+        return $this->scopedToTenant(
+            $this->hasMany(ClaimAttempt::class, 'order_reference', 'order_reference'),
+            correlate: true,
+        );
     }
 
     public function hasExpired(CarbonImmutable $at): bool
