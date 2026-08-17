@@ -18,6 +18,8 @@ use Liberu\Ecommerce\CustomerAccounts\Exceptions\ClaimRefused;
 use Liberu\Ecommerce\CustomerAccounts\Exceptions\NotEntitled;
 use Liberu\Ecommerce\CustomerAccounts\Models\ClaimAttempt;
 use Liberu\Ecommerce\CustomerAccounts\Models\OrderClaim;
+use Liberu\Ecommerce\CustomerAccounts\Models\PrivacyRequest;
+use Liberu\Ecommerce\CustomerAccounts\Models\SavedList;
 use Liberu\Ecommerce\CustomerAccounts\Policies\CustodyPolicy;
 use Liberu\Ecommerce\CustomerAccounts\Queries\IsEntitledToOrder;
 use Liberu\Ecommerce\CustomerAccounts\Queries\ListSavedLists;
@@ -95,6 +97,55 @@ it('keeps a saved list and its relations inside its own merchant', function (): 
         ->and($a->shares()->count())->toBe(0)
         ->and($a->liveShares()->count())->toBe(0)
         ->and((new ListSavedLists())('tenant-a', 'person-1'))->toHaveCount(1);
+});
+
+it('counts relations from a fresh instance without silently reporting zero', function (): void {
+    // The other half of the restatement, and the half that is easy to ship
+    // broken: withCount() and whereHas() build the relation from an instance
+    // whose tenant_id is null, so an unguarded where('tenant_id', (string)
+    // $this->tenant_id) becomes where('tenant_id', '') and every count is zero.
+    // A suite that only ever counted through a loaded parent cannot see it, and
+    // neither can an assertion of zero — so every count asserted here is
+    // non-zero, and the merchant that owns the rows is the one that gets them.
+    participants(['customers' => ['adapter' => new RecordingParticipant()]]);
+
+    $a = (new CreateSavedList())('tenant-a', 'person-1', 'Wishlist');
+    $b = (new CreateSavedList())('tenant-b', 'person-1', 'Wishlist');
+
+    (new AddItemToSavedList())($a->reference, 'prod-9');
+    (new AddItemToSavedList())($b->reference, 'prod-9');
+    (new ShareSavedList())($a->reference);
+    (new ShareSavedList())($b->reference);
+
+    openCase(tenantId: 'tenant-a');
+
+    $list = SavedList::query()->where('tenant_id', 'tenant-a')->withCount(['items', 'shares'])->firstOrFail();
+    $case = PrivacyRequest::query()->where('tenant_id', 'tenant-a')->withCount('participants')->firstOrFail();
+
+    expect($list->items_count)->toBe(1)
+        ->and($list->shares_count)->toBe(1)
+        ->and($case->participants_count)->toBe(1);
+
+    expect(SavedList::query()->whereHas('items')->count())->toBe(2)
+        ->and(SavedList::query()->where('tenant_id', 'tenant-a')->whereHas('shares')->count())->toBe(1);
+});
+
+it('counts a claim s attempts as its own merchant s from a fresh instance', function (): void {
+    // The relation with no foreign key behind it, so the guard cannot fall back
+    // to the join the way the others do: two merchants share order number 1001,
+    // and a count that fell back would report both merchants attempts as one
+    // merchant's. Not zero, not two — one, on each side.
+    bothMerchants();
+
+    (new OpenGuestOrderClaim())('tenant-a', 'ORD-1001', 'alice@example.test', 'alice');
+    (new OpenGuestOrderClaim())('tenant-b', 'ORD-1001', 'bob@example.test', 'bob');
+
+    $counted = OrderClaim::query()->orderBy('id')->withCount('attempts')->get();
+
+    expect(ClaimAttempt::query()->where('order_reference', 'ORD-1001')->count())->toBe(2)
+        ->and($counted->pluck('attempts_count')->all())->toBe([1, 1])
+        ->and($counted->pluck('tenant_id')->all())->toBe(['tenant-a', 'tenant-b'])
+        ->and(OrderClaim::query()->whereHas('attempts')->count())->toBe(2);
 });
 
 it('hides a share from the merchant it does not belong to', function (): void {

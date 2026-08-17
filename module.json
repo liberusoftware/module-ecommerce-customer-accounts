@@ -1,6 +1,6 @@
 {
     "name": "ecommerce-customer-accounts",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "The person's standing to act: claims, saved lists, and the privacy request as a case with participants.",
     "category": "capability",
     "provider": "Liberu\\Ecommerce\\CustomerAccounts\\CustomerAccountsServiceProvider",

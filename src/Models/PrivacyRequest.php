@@ -42,6 +42,8 @@ use Liberu\Ecommerce\CustomerAccounts\Enums\RequestState;
  */
 class PrivacyRequest extends Model
 {
+    use RestatesTenant;
+
     protected $table = 'customer_accounts_privacy_requests';
 
     protected $guarded = [];
@@ -73,14 +75,13 @@ class PrivacyRequest extends Model
      * Tenant-safe by construction: the participant rows carry the case's own
      * tenant, and the relation restates it rather than trusting the foreign key
      * alone. Wave 14 found the previous wave's custody proof was written about
-     * queries while the leak was in a relation, so relations restate it here.
+     * queries while the leak was in a relation, so relations restate it here —
+     * guarded, because the obvious restatement zeroes every count. See
+     * {@see RestatesTenant}.
      */
     public function participants(): HasMany
     {
-        return $this->hasMany(PrivacyRequestParticipant::class, 'privacy_request_id')
-            // Cast, deliberately: `where('col', null)` compiles to `is null`, so
-            // an unsaved parent would list every orphan row rather than none.
-            ->where('tenant_id', (string) $this->tenant_id);
+        return $this->scopedToTenant($this->hasMany(PrivacyRequestParticipant::class, 'privacy_request_id'));
     }
 
     public function deadline(): Deadline

@@ -24,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class SavedList extends Model
 {
+    use RestatesTenant;
+
     protected $table = 'customer_accounts_saved_lists';
 
     protected $guarded = [];
@@ -44,14 +46,12 @@ class SavedList extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(SavedListItem::class, 'saved_list_id')
-            ->where('tenant_id', (string) $this->tenant_id);
+        return $this->scopedToTenant($this->hasMany(SavedListItem::class, 'saved_list_id'));
     }
 
     public function shares(): HasMany
     {
-        return $this->hasMany(SavedListShare::class, 'saved_list_id')
-            ->where('tenant_id', (string) $this->tenant_id);
+        return $this->scopedToTenant($this->hasMany(SavedListShare::class, 'saved_list_id'));
     }
 
     /** Shares that still resolve. A revoked share is a row, not a deletion. */

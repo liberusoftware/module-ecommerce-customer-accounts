@@ -82,6 +82,23 @@ it('writes the attempt record through the model, never through the builder', fun
     }
 });
 
+it('restates a tenant on a relation only through the guard', function (): void {
+    // The obvious form — ->where('tenant_id', (string) $this->tenant_id) — is
+    // correct through a loaded parent and zeroes every withCount() and
+    // whereHas(), because those build the relation from an instance whose
+    // tenant_id is null. It ships green from inside a domain package and breaks
+    // in the first surface that counts, which is why no test here caught it.
+    // RestatesTenant is the guarded form; this rule is what stops the next
+    // relation being written the obvious way.
+    foreach (sourceFiles() as $file) {
+        if (! str_contains($file, DIRECTORY_SEPARATOR.'Models'.DIRECTORY_SEPARATOR)) {
+            continue;
+        }
+
+        expect(sourceCode($file))->not->toMatch('/where\(\s*[\'"]tenant_id[\'"]/');
+    }
+});
+
 it('ships a provider that binds nothing', function (): void {
     $provider = sourceCode(dirname(__DIR__, 2).'/src/CustomerAccountsServiceProvider.php');
 
